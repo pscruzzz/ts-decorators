@@ -1,4 +1,4 @@
-import { isPromise } from "util/types"
+import axios from "axios"
 
 abstract class ImportantBaseClass {
 
@@ -23,9 +23,15 @@ class ImportantClass extends ImportantBaseClass {
   }
 
   public async setImportantDataFromOtherWorld(id: string, data: string): Promise<void> {
-    console.log(`Hey, ${id} with data ${data} was set, importantInfo is ${this.importantInfo}!`)
     this.counter = this.counter + this.getRandomData()
-    await new Promise((resolve) => setTimeout(() => resolve("This is the promise result"), 3000))
+    const { data: responseData }: any = await axios({
+      method: 'get',
+      url: 'https://api.github.com/orgs/facebook/repos',
+      headers: {
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    })
+    console.log(`importantInfo is ${this.importantInfo}! Fetched data is ${responseData[0].node_id}. Counter is ${this.counter}`)
     return
   }
 
@@ -35,12 +41,10 @@ class ImportantClass extends ImportantBaseClass {
   }
 }
 
-function decoratorPlayed(target: typeof ImportantBaseClass): void {
-  for (const propertyName of Object.keys(target.prototype)) {
+function decoratorPlayed(target: typeof ImportantClass): void {
+  for (const propertyName of Object.keys(Object.getOwnPropertyDescriptors(target.prototype))) {
     const classPropertyOrMethod = Object.getOwnPropertyDescriptor(target.prototype, propertyName);
     const isMethod = classPropertyOrMethod?.value instanceof Function;
-
-    console.log(propertyName, "propertyName")
 
     if (!isMethod) {
       continue;
@@ -52,20 +56,25 @@ function decoratorPlayed(target: typeof ImportantBaseClass): void {
 
     const classMethod: PropertyDescriptor = classPropertyOrMethod
     const originalMethod: Function = classMethod?.value;
-    let isMethodPromise = false
-
-    try {
-      isMethodPromise = isPromise(Object.getOwnPropertyDescriptor(target.prototype, propertyName)?.value())
-    } catch (err) {
-      isMethodPromise = false
-    }
+    const isMethodPromise = "AsyncFunction" === Object.getPrototypeOf(originalMethod).constructor.name.toString()
 
     if (isMethodPromise) {
       classMethod.value = async function (...args: any[]): Promise<any> {
-        const value = "This is the promise result"
-        const response = await new Promise<string>((resolve) => setTimeout(() => resolve(value), 3000))
-        Object.defineProperty(this, "importantInfo", { value: response })
-        return originalMethod.apply(this, args)
+        const { data: responseData }: any = await axios({
+          method: 'get',
+          url: 'https://api.github.com/orgs/facebook/repos',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        })
+        Object.defineProperty(this, "importantInfo", {
+          value: responseData[0].node_id,
+          writable: true,
+          enumerable: true,
+          configurable: true
+        })
+        const result = await originalMethod.apply(this, args)
+        return result
       }
 
       Object.defineProperty(target.prototype, propertyName, classMethod);

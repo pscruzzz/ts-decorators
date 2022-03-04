@@ -7,11 +7,12 @@
     "start": "ts-node-dev ./decorator.ts"
   },
   "dependencies": {
+    "axios": "^0.26.0",
     "ts-node": "^10.2.1",
     "ts-node-dev": "^1.1.8",
     "typescript": "^4.4.2"
   },
   "devDependencies": {
-    "@types/node": "^17.0.18"
+    "@types/node": "^17.0.21"
   }
 }
